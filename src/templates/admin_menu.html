@@ -1,0 +1,589 @@
+{% extends "admin_dashboard.html" %}
+{% block title %}Menu{% endblock %}
+
+<body class="min-h-screen flex flex-col bg-gray-50">
+    {% block content %}
+    <main class="container mx-auto px-4 py-8 flex-grow">
+        <section class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <h2 class="text-2xl font-semibold text-gray-800 border-b border-gray-300 pb-2">Menu Items</h2>
+            <div class="flex flex-wrap gap-3 items-center">
+                <input type="text" id="search-input" placeholder="Search by Name or Description" aria-label="Search menu items" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 flex-grow min-w-[180px]" />
+                <select id="sort-order" aria-label="Sort menu items" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[160px]">
+                    <option value="name-asc" selected>Name Ascending</option>
+                    <option value="name-desc">Name Descending</option>
+                    <option value="price-asc">Price Low to High</option>
+                    <option value="price-desc">Price High to Low</option>
+                </select>
+                <label for="priceRange" class="text-sm font-medium text-gray-700 whitespace-nowrap">Price Range:</label>
+                <input type="range" id="priceRange" min="0" max="100" step="0.01" value="100" class="w-32 accent-purple-600" />
+                <span id="priceRangeValue" class="text-sm text-gray-700 min-w-[50px] text-right">$100</span>
+                <button id="openAddItemBtn" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap">
+                    <i class="fas fa-plus mr-2"></i> Item
+                </button>
+                <button id="deleteSelectedBtn" class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-500 whitespace-nowrap">
+                    <i class="fas fa-trash-alt mr-2"></i> Selected
+                </button>
+                <button id="exportCsvBtn" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap">
+                    <i class="fas fa-file-csv mr-2"></i> Export
+                </button>
+            </div>
+        </section>
+        <section>
+            <div class="overflow-x-auto rounded-lg shadow-md bg-white">
+                <table class="min-w-full divide-y divide-gray-200" id="menu-table" role="table" aria-label="Menu items table">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
+                                <input type="checkbox" id="selectAllCheckbox" aria-label="Select all menu items" />
+                            </th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">ID</th>
+<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider max-w-[160px]" style="max-width:160px;">Name</th>
+<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[180px]" style="max-width:180px;">Description</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Price</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Photo</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">Category</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">Status</th>
+                            <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-36">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="menu-tbody">
+                        <!-- Menu items will be dynamically rendered here -->
+                    </tbody>
+                </table>
+            </div>
+            <nav class="mt-4 flex flex-wrap justify-center gap-2" id="pagination-controls" aria-label="Pagination controls">
+                <!-- Pagination buttons will be dynamically rendered here -->
+            </nav>
+        </section>
+    </main>
+
+    <!-- Overlay Modal for Add New Item -->
+    <div id="addItemOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="addItemTitle">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative mx-4">
+            <button id="closeAddItemBtn" aria-label="Close add new item form" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none focus:outline-none focus:ring-2 focus:ring-purple-500">
+                &times;
+            </button>
+            <h2 id="addItemTitle" class="text-2xl font-semibold text-gray-800 mb-6 border-b border-gray-300 pb-2">Add New Item</h2>
+            <form id="addItemForm" class="space-y-6" autocomplete="off">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="name" name="name" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input type="text" id="description" name="description" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" id="price" name="price" step="0.01" min="0" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+                    <input type="file" id="photo" name="photo" accept="image/*" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select id="category" name="category" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Category</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Steak">Steak</option>
+                        <option value="Rice Meal">Rice Meal</option>
+                        <option value="Family Meal">Family Meal</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="House Specialty">House Specialty</option>
+                        <option value="Special Offer Vj's Shawarma">Special Offer Vj's Shawarma</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status" name="status" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="available" selected>Available</option>
+                        <option value="not available">Not Available</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelAddItemBtn" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+                    <button type="button" onclick="addItem()" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <i class="fas fa-plus mr-2"></i> Add Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Update Item Overlay Modal -->
+    <div id="updateItemOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="updateItemTitle">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative mx-4">
+            <button id="closeUpdateItemBtn" aria-label="Close update item form" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none focus:outline-none focus:ring-2 focus:ring-blue-500">&times;</button>
+            <h2 id="updateItemTitle" class="text-2xl font-semibold text-gray-800 mb-6 border-b border-gray-300 pb-2">Update Item</h2>
+            <form id="updateItemForm" class="space-y-6" enctype="multipart/form-data" autocomplete="off">
+                <input type="hidden" id="updateItemId" name="id" />
+                <div>
+                    <label for="updateName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="updateName" name="name" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="updateDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input type="text" id="updateDescription" name="description" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="updatePrice" class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" id="updatePrice" name="price" step="0.01" min="0" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="updatePhoto" class="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+                    <input type="file" id="updatePhoto" name="photo" accept="image/*" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="updateCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select id="updateCategory" name="category" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Category</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Steak">Steak</option>
+                        <option value="Rice Meal">Rice Meal</option>
+                        <option value="Family Meal">Family Meal</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="House Specialty">House Specialty</option>
+                        <option value="Special Offer Vj's Shawarma">Special Offer Vj's Shawarma</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="updateStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="updateStatus" name="status" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="available">Available</option>
+                        <option value="not available">Not Available</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelUpdateItemBtn" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+                    <button type="button" onclick="submitUpdateItem()" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-save mr-2"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    // Variables for pagination and filtering
+    let currentPage = 1;
+    const itemsPerPage = 5;
+    let filteredMenu = [];
+
+    // Elements
+    const menuTbody = document.getElementById('menu-tbody');
+    const paginationControls = document.getElementById('pagination-controls');
+    const searchInput = document.getElementById('search-input');
+    const sortOrder = document.getElementById('sort-order');
+    const priceRange = document.getElementById('priceRange');
+    const priceRangeValue = document.getElementById('priceRangeValue');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const addItemOverlay = document.getElementById('addItemOverlay');
+    const updateItemOverlay = document.getElementById('updateItemOverlay');
+    const openAddItemBtn = document.getElementById('openAddItemBtn');
+    const closeAddItemBtn = document.getElementById('closeAddItemBtn');
+    const cancelAddItemBtn = document.getElementById('cancelAddItemBtn');
+    const closeUpdateItemBtn = document.getElementById('closeUpdateItemBtn');
+    const cancelUpdateItemBtn = document.getElementById('cancelUpdateItemBtn');
+
+    // Initial menu data from server-side rendered context
+    const menuData = [
+        {% for item in menu %}
+        {
+            id: {{ item.id }},
+            name: "{{ item.name|replace('"', '\\"') }}",
+            description: "{{ item.description|replace('"', '\\"') }}",
+            price: {{ item.price }},
+            photo_path: "{{ item.photo_path }}",
+            category: "{{ item.category }}",
+            status: "{{ item.status }}"
+        },
+        {% endfor %}
+    ];
+
+    // Update price range max based on max price in menu
+    const maxPrice = menuData.length > 0 ? Math.max(...menuData.map(item => item.price)) : 100;
+    priceRange.max = maxPrice;
+    priceRange.value = maxPrice;
+    priceRangeValue.textContent = `₱${maxPrice.toFixed(2)}`;
+
+    // Event listeners
+    searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        filterAndRenderMenu();
+    });
+
+    sortOrder.addEventListener('change', () => {
+        currentPage = 1;
+        filterAndRenderMenu();
+    });
+
+    priceRange.addEventListener('input', () => {
+        priceRangeValue.textContent = `₱${parseFloat(priceRange.value).toFixed(2)}`;
+        currentPage = 1;
+        filterAndRenderMenu();
+    });
+
+    selectAllCheckbox.addEventListener('change', () => {
+        const checkboxes = document.querySelectorAll('.select-item-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+    });
+
+    deleteSelectedBtn.addEventListener('click', () => {
+        const selectedIds = Array.from(document.querySelectorAll('.select-item-checkbox:checked')).map(cb => parseInt(cb.dataset.id));
+        if (selectedIds.length === 0) {
+            alert('No items selected for deletion.');
+            return;
+        }
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected items?`)) {
+            return;
+        }
+        fetch('/admin/menu/bulk_delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedIds })
+        }).then(response => response.json()).then(data => {
+            alert(data.message || data.error);
+            if (!data.error) {
+                location.reload();
+            }
+        }).catch(() => {
+            alert('Failed to delete selected items. Please try again.');
+        });
+    });
+
+    exportCsvBtn.addEventListener('click', () => {
+        exportTableToCSV('menu_items.csv');
+    });
+
+    function exportTableToCSV(filename) {
+        const csvRows = [];
+        const headers = ['ID', 'Name', 'Description', 'Price', 'Photo', 'Category'];
+        csvRows.push(headers.join(','));
+
+        filteredMenu.forEach(item => {
+            const row = [
+                item.id,
+                `"${item.name.replace(/"/g, '""')}"`,
+                `"${item.description.replace(/"/g, '""')}"`,
+                item.price,
+                item.photo_path,
+                item.category
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', filename);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function filterAndRenderMenu() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const sortValue = sortOrder.value;
+        const maxPriceFilter = parseFloat(priceRange.value);
+
+        filteredMenu = menuData.filter(item => {
+            const matchesSearch = item.name.toLowerCase().includes(searchTerm) || item.description.toLowerCase().includes(searchTerm);
+            const matchesPrice = item.price <= maxPriceFilter;
+            return matchesSearch && matchesPrice;
+        });
+
+        // Sort
+        filteredMenu.sort((a, b) => {
+            switch (sortValue) {
+                case 'name-asc': return a.name.localeCompare(b.name);
+                case 'name-desc': return b.name.localeCompare(a.name);
+                case 'price-asc': return a.price - b.price;
+                case 'price-desc': return b.price - a.price;
+                default: return 0;
+            }
+        });
+
+        currentPage = Math.min(currentPage, Math.ceil(filteredMenu.length / itemsPerPage) || 1);
+
+        renderMenuPage();
+        renderPaginationControls();
+    }
+
+    function renderMenuPage() {
+        menuTbody.innerHTML = '';
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const pageItems = filteredMenu.slice(start, end);
+
+        pageItems.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 menu-item';
+            tr.dataset.name = item.name.toLowerCase();
+            tr.dataset.description = item.description.toLowerCase();
+            tr.dataset.price = item.price;
+
+            tr.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-700">
+                    <input type="checkbox" class="select-item-checkbox" data-id="${item.id}" aria-label="Select item ${item.name}" />
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${item.id}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900 max-w-[160px] break-words" style="max-width:160px;" title="${item.name}">${item.name}</td>
+                <td class="px-4 py-3 text-sm text-gray-700 max-w-[180px] break-words" style="max-width:180px;">${item.description}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">₱${item.price.toFixed(2)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                    <img src="/uploads/${item.photo_path}" alt="Photo of menu item named ${item.name}" class="h-16 w-16 object-cover rounded-md photo-preview cursor-pointer" />
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${item.category || ''}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                    <select class="status-select border border-gray-300 rounded-md px-2 py-1 text-sm" data-id="${item.id}">
+                        <option value="available" ${item.status === 'available' ? 'selected' : ''}>Available</option>
+                        <option value="not available" ${item.status === 'not available' ? 'selected' : ''}>Not Available</option>
+                    </select>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                    <button onclick="openUpdateItemById(${item.id})" class="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Update item ${item.name}">
+                        <i class="fas fa-edit mr-1"></i> Update
+                    </button>
+                    <button onclick="deleteItem(${item.id})" class="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition focus:outline-none focus:ring-2 focus:ring-red-500" aria-label="Delete item ${item.name}">
+                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                    </button>
+                </td>
+            `;
+
+            menuTbody.appendChild(tr);
+        });
+
+        // Add image preview on hover
+        const photoPreviews = document.querySelectorAll('.photo-preview');
+        photoPreviews.forEach(img => {
+            img.addEventListener('mouseenter', () => {
+                const preview = document.createElement('div');
+                preview.className = 'absolute z-50 border border-gray-300 bg-white p-2 rounded shadow-lg';
+                const largeImg = document.createElement('img');
+                largeImg.src = img.src;
+                largeImg.alt = img.alt;
+                largeImg.style.maxWidth = '300px';
+                largeImg.style.maxHeight = '300px';
+                largeImg.className = 'rounded-md';
+                preview.appendChild(largeImg);
+                document.body.appendChild(preview);
+
+                const rect = img.getBoundingClientRect();
+                let top = rect.bottom + window.scrollY + 5;
+                let left = rect.left + window.scrollX;
+
+                // Prevent preview from going off screen right
+                if (left + 310 > window.innerWidth) {
+                    left = window.innerWidth - 310;
+                }
+                // Prevent preview from going off screen bottom
+                if (top + 310 > window.innerHeight + window.scrollY) {
+                    top = rect.top + window.scrollY - 310 - 5;
+                }
+
+                preview.style.top = `${top}px`;
+                preview.style.left = `${left}px`;
+
+                img.addEventListener('mouseleave', () => {
+                    preview.remove();
+                }, { once: true });
+            });
+        });
+    }
+
+    function renderPaginationControls() {
+        paginationControls.innerHTML = '';
+        const totalPages = Math.ceil(filteredMenu.length / itemsPerPage);
+        if (totalPages <= 1) return;
+
+        // Previous button
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = 'Prev';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.className = `px-3 py-1 rounded-md border ${prevBtn.disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'}`;
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderMenuPage();
+                renderPaginationControls();
+            }
+        });
+        paginationControls.appendChild(prevBtn);
+
+        // Page buttons
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.className = `px-3 py-1 rounded-md border ${i === currentPage ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`;
+            btn.setAttribute('aria-current', i === currentPage ? 'page' : 'false');
+            btn.addEventListener('click', () => {
+                currentPage = i;
+                renderMenuPage();
+                renderPaginationControls();
+            });
+            paginationControls.appendChild(btn);
+        }
+
+        // Next button
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Next';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.className = `px-3 py-1 rounded-md border ${nextBtn.disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'}`;
+        nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderMenuPage();
+                renderPaginationControls();
+            }
+        });
+        paginationControls.appendChild(nextBtn);
+    }
+
+    // Initial render
+    filterAndRenderMenu();
+
+    // Add item modal open/close handlers
+    openAddItemBtn.addEventListener('click', () => {
+        addItemOverlay.classList.remove('hidden');
+        document.getElementById('name').focus();
+    });
+    closeAddItemBtn.addEventListener('click', () => {
+        addItemOverlay.classList.add('hidden');
+        document.getElementById('addItemForm').reset();
+    });
+    cancelAddItemBtn.addEventListener('click', () => {
+        addItemOverlay.classList.add('hidden');
+        document.getElementById('addItemForm').reset();
+    });
+
+    // Update item modal open/close handlers
+    closeUpdateItemBtn.addEventListener('click', () => {
+        updateItemOverlay.classList.add('hidden');
+        document.getElementById('updateItemForm').reset();
+    });
+    cancelUpdateItemBtn.addEventListener('click', () => {
+        updateItemOverlay.classList.add('hidden');
+        document.getElementById('updateItemForm').reset();
+    });
+
+    // Close modals on Escape key
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (!addItemOverlay.classList.contains('hidden')) {
+                addItemOverlay.classList.add('hidden');
+                document.getElementById('addItemForm').reset();
+            }
+            if (!updateItemOverlay.classList.contains('hidden')) {
+                updateItemOverlay.classList.add('hidden');
+                document.getElementById('updateItemForm').reset();
+            }
+        }
+    });
+
+    // Existing addItem, updateItem, deleteItem functions remain unchanged
+    function addItem() {
+        const form = document.getElementById('addItemForm');
+        const formData = new FormData(form);
+
+        fetch('/admin/menu/add', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json()).then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert(data.message);
+                location.reload();
+            }
+        }).catch(() => {
+            alert('Failed to add item. Please try again.');
+        });
+    }
+
+    function openUpdateItemById(id) {
+        const item = menuData.find(i => i.id === id);
+        if (item) {
+            openUpdateItemForm(item);
+        }
+    }
+
+    function openUpdateItemForm(item) {
+        updateItemOverlay.classList.remove('hidden');
+        document.getElementById('updateItemId').value = item.id;
+        document.getElementById('updateName').value = item.name;
+        document.getElementById('updateDescription').value = item.description;
+        document.getElementById('updatePrice').value = item.price.toFixed(2);
+        document.getElementById('updatePhoto').value = '';
+        document.getElementById('updateCategory').value = item.category;
+        document.getElementById('updateStatus').value = item.status;
+        document.getElementById('updateName').focus();
+    }
+
+    function submitUpdateItem() {
+        const form = document.getElementById('updateItemForm');
+        const formData = new FormData(form);
+
+        fetch('/admin/menu/update', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json()).then(data => {
+            alert(data.message);
+            location.reload();
+        }).catch(() => {
+            alert('Failed to update item. Please try again.');
+        });
+    }
+
+    // Add event listener for status select change
+    document.addEventListener('DOMContentLoaded', () => {
+        const statusSelects = document.querySelectorAll('.status-select');
+        statusSelects.forEach(select => {
+            select.addEventListener('change', (event) => {
+                const itemId = event.target.getAttribute('data-id');
+                const newStatus = event.target.value;
+
+                // Prepare form data for update
+                const formData = new FormData();
+                formData.append('id', itemId);
+                formData.append('status', newStatus);
+
+                // Send update request to backend
+                fetch('/admin/menu/update', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.json()).then(data => {
+                    if (data.error) {
+                        alert('Failed to update status: ' + data.error);
+                    } else {
+                        alert('Status updated successfully');
+                    }
+                }).catch(() => {
+                    alert('Failed to update status. Please try again.');
+                });
+            });
+        });
+    });
+
+    function deleteItem(id) {
+        if (confirm('Are you sure you want to delete this item?')) {
+            fetch('/admin/menu/delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(response => response.json()).then(data => {
+                alert(data.message);
+                location.reload();
+            }).catch(() => {
+                alert('Failed to delete item. Please try again.');
+            });
+        }
+    }
+</script>
+    {% endblock %}
+</body>

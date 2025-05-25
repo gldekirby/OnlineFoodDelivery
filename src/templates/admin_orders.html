@@ -1,0 +1,149 @@
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-purple-50 min-h-screen flex flex-col">
+    {% extends "admin_dashboard.html" %}
+    {% block title %}Orders{% endblock %}
+    {% block content %}
+        <main class="container mx-auto px-4 py-8 flex-grow">
+            <section class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+                <h2 class="text-2xl font-semibold text-gray-800 border-b border-gray-300 pb-2">Customer Orders</h2>
+                <div class="flex space-x-4 items-center">
+                    <input type="text" id="search-input" placeholder="Search by Order ID" class="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    <select id="status-filter" class="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Preparing">Preparing</option>
+                        <option value="Ready">Ready</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <select id="sort-order" class="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="desc" selected>Newest First</option>
+                        <option value="asc">Oldest First</option>
+                    </select>
+                </div>
+            </section>
+            <section id="orders-container" class="space-y-8">
+                {% for order in orders %}
+                <div class="rounded-lg shadow-md p-4 order-item cursor-pointer
+                    {% set colors = ['bg-purple-100', 'bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500'] %}
+                    {{ colors[(loop.index0) % colors|length] }}
+                " data-order-id="{{ order.order_id }}" data-status="{{ order.status }}" data-order-date="{{ order.order_date }}">
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Customer Order ID: {{ order.order_id }}</p>
+                            <p class="text-sm text-gray-600">Order Date: {{ order.order_date }}</p>
+                        </div>
+                        <div>
+                            {% if order.status == 'Pending' %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-200 text-yellow-800">{{ order.status }}</span>
+                            {% elif order.status == 'Completed' %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-200 text-green-800">{{ order.status }}</span>
+                            {% elif order.status == 'Cancelled' %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-200 text-red-800">{{ order.status }}</span>
+                            {% else %}
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-800">{{ order.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <table class="min-w-full divide-y divide-gray-200 mb-4">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Quantity</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for item in order['items'] %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.item_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ item.quantity }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">₱{{ '%.2f' | format(item.price) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">₱{{ '%.2f' | format(item.item_total) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm font-semibold text-gray-700">Total Amount: ₱{{ '%.2f' | format(order.total_amount) }}</p>
+                        <select onchange="updateOrderStatus({{ order.order_id }}, this.value)" class="border border-gray-300 rounded-md px-2 py-1">
+                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Preparing" {% if order.status == 'Preparing' %}selected{% endif %}>Preparing</option>
+                            <option value="Ready" {% if order.status == 'Ready' %}selected{% endif %}>Ready</option>
+                            <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completed</option>
+                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+        </main>
+
+        <script>
+            async function updateOrderStatus(orderId, newStatus) {
+                try {
+                    const response = await fetch('/admin/order/update_status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: orderId, status: newStatus })
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        alert('Order status updated successfully');
+                        location.reload();
+                    } else {
+                        alert('Failed to update order status: ' + data.error);
+                    }
+                } catch (error) {
+                    alert('Failed to update order status. Please try again.');
+                }
+            }
+
+            // Filtering and sorting logic
+            const searchInput = document.getElementById('search-input');
+            const statusFilter = document.getElementById('status-filter');
+            const sortOrder = document.getElementById('sort-order');
+            const ordersContainer = document.getElementById('orders-container');
+            const orderItems = Array.from(document.querySelectorAll('.order-item'));
+
+            function filterAndSortOrders() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusTerm = statusFilter.value;
+                const sortDirection = sortOrder.value;
+
+                let filtered = orderItems.filter(item => {
+                    const orderId = item.getAttribute('data-order-id').toLowerCase();
+                    const status = item.getAttribute('data-status');
+                    const matchesSearch = orderId.includes(searchTerm);
+                    const matchesStatus = statusTerm === '' || status === statusTerm;
+                    return matchesSearch && matchesStatus;
+                });
+
+                filtered.sort((a, b) => {
+                    const dateA = new Date(a.getAttribute('data-order-date'));
+                    const dateB = new Date(b.getAttribute('data-order-date'));
+                    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+
+                ordersContainer.innerHTML = '';
+                filtered.forEach(item => ordersContainer.appendChild(item));
+            }
+
+            searchInput.addEventListener('input', filterAndSortOrders);
+            statusFilter.addEventListener('change', filterAndSortOrders);
+            sortOrder.addEventListener('change', filterAndSortOrders);
+        </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,826 @@
+<html lang="en">
+ <head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>
+   Menu
+  </title>
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;display=swap" rel="stylesheet" />
+  <style>
+   body {
+    font-family: "Inter", sans-serif;
+   }
+   /* Custom scrollbar for order container */
+   #order-container::-webkit-scrollbar,
+   #order-history-overlay::-webkit-scrollbar {
+    width: 8px;
+   }
+   #order-container::-webkit-scrollbar-thumb,
+   #order-history-overlay::-webkit-scrollbar-thumb {
+    background-color: #a78bfa;
+    border-radius: 4px;
+   }
+   /* Clamp item name text to max 2 lines and adjust font size to fit */
+   .item-name {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    /* text-gray-800 */
+    text-align: center;
+    line-height: 1.2;
+    overflow: hidden;
+    word-break: break-word;
+    font-size: 1.25rem;
+    /* base font size */
+    transition: font-size 0.2s ease;
+    max-width: 100%;
+    white-space: normal;
+   }
+   /* Overlay fade-in/out animation */
+   .fade-in {
+    animation: fadeIn 0.3s ease forwards;
+   }
+   .fade-out {
+    animation: fadeOut 0.3s ease forwards;
+   }
+   @keyframes fadeIn {
+    from {
+     opacity: 0;
+     transform: translateY(10px);
+    }
+    to {
+     opacity: 1;
+     transform: translateY(0);
+    }
+   }
+   @keyframes fadeOut {
+    from {
+     opacity: 1;
+     transform: translateY(0);
+    }
+    to {
+     opacity: 0;
+     transform: translateY(10px);
+    }
+   }
+  </style>
+ </head>
+ <body class="bg-gray-50 min-h-screen flex flex-col">
+  <header class="bg-purple-700 text-white shadow-md">
+   <div class="max-w-7xl mx-auto px-4 py-5 flex items-center justify-between">
+    <h1 class="text-3xl font-semibold tracking-wide flex items-center space-x-3">
+     <img alt="Logo icon with letter M in purple and white" class="w-10 h-10 rounded-full bg-white p-1" height="40" loading="lazy" src="https://storage.googleapis.com/a1aa/image/1961fbbb-fe3f-4f66-2897-a94a31bbfbc7.jpg" width="40" />
+     <span>
+      JDM Steakhouse
+     </span>
+    </h1>
+    <div id="category-buttons" class=" flex flex-wrap gap-3 justify-center md:justify-start">
+     <!-- Category buttons will be inserted here dynamically -->
+    </div>
+    <nav class="hidden md:flex space-x-6 font-semibold text-white">
+     <a class="hidden hover:text-purple-300 transition focus:outline-none focus:ring-2 focus:ring-purple-300 rounded" href="#menu-container">
+      Menu
+     </a>
+     <button id="show-order-section" class=" hidden hover:text-purple-300 transition focus:outline-none focus:ring-2 focus:ring-purple-300 rounded" type="button">
+      Your Order
+     </button>
+     <button id="show-order-history" class="hidden hover:text-purple-300 transition focus:outline-none focus:ring-2 focus:ring-purple-300 rounded" type="button">
+      Order History
+     </button>
+    </nav>
+    <button aria-expanded="false" aria-label="Toggle mobile menu" class="md:hidden focus:outline-none" id="mobile-menu-button">
+     <i class="fas fa-bars text-2xl">
+     </i>
+    </button>
+   </div>
+   <nav aria-label="Mobile menu" class="hidden md:hidden bg-purple-600 px-4 pb-4" id="mobile-menu">
+    <a class="block py-2 text-white hover:bg-purple-500 rounded focus:outline-none focus:bg-purple-500" href="#menu-container">
+     Menu
+    </a>
+    <button id="show-order-section-mobile" class="block w-full text-left py-2 text-white hover:bg-purple-500 rounded focus:outline-none focus:bg-purple-500" type="button">
+     Your Order
+    </button>
+    <button id="show-order-history-mobile" class="block w-full text-left py-2 text-white hover:bg-purple-500 rounded focus:outline-none focus:bg-purple-500" type="button">
+     Order History
+    </button>
+   </nav>
+  </header>
+  <main class="flex-grow w-full mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-4">
+   <section aria-label="Menu items" class="md:col-span-3 relative max-h-[calc(100vh-90px)]" id="menu-container" tabindex="0">
+    <div class="flex justify-between mb-4 px-2">
+     <button id="prev-category" aria-label="Previous category" class="p-2 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed" style="margin-left: 10px;">
+      <i class="fas fa-arrow-left"></i>
+     </button>
+     <button id="next-category" aria-label="Next category" class="p-2 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed" style="margin-right: 10px;">
+      <i class="fas fa-arrow-right"></i>
+     </button>
+    </div>
+    <div id="menu-items-wrapper" class="overflow-y-auto max-h-full">
+     {% for category, items in menu.items() %}
+     <div class="category-section mb-8 hidden" data-category="{{ category }}">
+      <h2 class="text-2xl font-bold text-purple-700 mb-4 border-b-2 border-purple-700 pb-1">
+       {{ category }}
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mx-auto h-full">
+       {% for item in items %}
+       <div class="menu-item bg-white rounded-lg shadow-md p-6 flex flex-col items-center justify-between hover:shadow-xl transition-shadow duration-300 {% if item.status == 'not available' %}bg-gray-300 cursor-not-allowed{% endif %}" style="aspect-ratio: 1 / 1; position: relative;">
+        <img alt="Image of {{ item.name }} dish, a delicious food item" class="w-full h-40 rounded-lg object-cover mb-4 {% if item.status == 'not available' %}opacity-50{% endif %}" height="160" src="/uploads/{{ item.photo_path }}" width="160" />
+        <div class="text-center flex-grow flex flex-col justify-between w-full">
+         <div>
+          <h2 class="item-name mb-2 max-w-xs break-words" id="item-name-{{ item.id }}">
+           {{ item.name }}
+          </h2>
+          <p class="text-xs text-purple-500 font-semibold mb-1">
+           {{ item.category }}
+          </p>
+          <p class="text-gray-600 text-sm mb-4 max-w-xs break-words">
+           {{ item.description }}
+          </p>
+         </div>
+         <p class="font-semibold text-purple-700 mb-4">
+          Price: ₱{{ item.price }}
+         </p>
+        </div>
+        <div class="w-full flex items-center justify-center space-x-3">
+         <label class="sr-only" for="quantity-{{ item.id }}">
+          Quantity for {{ item.name }}
+         </label>
+         <input class="w-16 border border-gray-300 rounded-md text-center focus:ring-2 focus:ring-purple-500 focus:outline-none {% if item.status == 'not available' %}bg-gray-200 cursor-not-allowed{% endif %}" id="quantity-{{ item.id }}" min="1" type="number" value="1" {% if item.status == 'not available' %}disabled{% endif %} />
+         <button aria-label="Add {{ item.name }} to cart" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md shadow-md transition flex items-center space-x-2 {% if item.status == 'not available' %}opacity-50 cursor-not-allowed pointer-events-none{% endif %}" onclick="addToOrder({{ item.id }}, '{{ item.name }}', {{ item.price }})" {% if item.status == 'not available' %}disabled{% endif %}>
+          <i class="fas fa-cart-plus">
+          </i>
+          <span class="text-sm">
+           Add to Cart
+          </span>
+         </button>
+        </div>
+        {% if item.status == 'not available' %}
+        <div class="absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center rounded-lg pointer-events-none">
+          <span class="text-white font-bold text-lg">Not Available</span>
+        </div>
+        {% endif %}
+       </div>
+       {% endfor %}
+      </div>
+     </div>
+     {% endfor %}
+    </div>
+   </section>
+   <aside aria-label="Your current order" class="bg-white rounded-lg shadow-md p-6 flex flex-col h-full" id="order-section" tabindex="0">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+     <i class="fas fa-shopping-cart text-purple-600">
+     </i>
+     <span>
+      Your Order
+     </span>
+    </h2>
+    <div class="flex-grow" id="order-container-wrapper">
+     <div aria-live="polite" aria-relevant="additions removals" class="overflow-y-auto max-h-[400px] divide-y divide-gray-200" id="order-container">
+     </div>
+    </div>
+    <div aria-live="polite" class="mt-4 text-right font-semibold text-lg text-purple-700" id="order-total">
+     Total: ₱0.00
+    </div>
+    <button aria-disabled="true" class="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-md shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed" disabled="" id="place-order" onclick="placeOrder()">
+     Place Order
+    </button>
+    <div aria-live="polite" class="mt-4 font-semibold text-gray-700" id="order-id-display">
+    </div>
+   </aside>
+  </main>
+  <!-- Order History Overlay -->
+  <div aria-labelledby="order-history-title" aria-modal="true" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-6" id="order-history-overlay" role="dialog">
+   <div class="relative bg-white rounded-3xl p-8 max-w-3xl w-full shadow-2xl text-center flex flex-col space-y-6 max-h-[80vh] overflow-hidden">
+    <h2 class="text-3xl font-extrabold text-purple-700 tracking-wide" id="order-history-title">
+     Order History
+    </h2>
+    <button aria-label="Close order history" class="absolute top-4 right-4 text-purple-700 hover:text-purple-900 focus:outline-none" id="close-order-history">
+     <i class="fas fa-times text-2xl"></i>
+    </button>
+    <div class="overflow-y-auto divide-y divide-purple-200" id="order-history-container" tabindex="0" style="max-height: calc(80vh - 120px);">
+     <p class="text-gray-500 text-center mt-10">
+      No past orders yet.
+     </p>
+    </div>
+   </div>
+  </div>
+  <div aria-labelledby="order-confirmation-title" aria-modal="true" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-50 p-6" id="order-overlay" role="dialog">
+   <div class="relative bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center flex flex-col items-center space-y-6">
+    <img alt="Illustration of a happy customer receiving a food order with confetti and celebration" class="w-full max-w-sm rounded-xl object-cover" height="160" src="https://storage.googleapis.com/a1aa/image/263d6c99-a0cc-4909-fdd8-e23c7c5e9d9b.jpg" width="320" />
+    <h2 class="text-3xl font-extrabold text-purple-700 tracking-wide" id="order-confirmation-title">
+     Order Confirmed!
+    </h2>
+    <p class="text-lg font-semibold text-gray-800" id="overlay-order-id">
+    </p>
+    <p class="text-lg font-semibold text-gray-800" id="overlay-order-total">
+    </p>
+    <button class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-full shadow-lg transition text-base font-semibold w-full max-w-xs" id="close-overlay">
+     Close
+    </button>
+   </div>
+  </div>
+  <script>
+   // Mobile menu toggle
+   const mobileMenuButton = document.getElementById("mobile-menu-button");
+   const mobileMenu = document.getElementById("mobile-menu");
+   mobileMenuButton.addEventListener("click", () => {
+    const expanded =
+     mobileMenuButton.getAttribute("aria-expanded") === "true" || false;
+    mobileMenuButton.setAttribute("aria-expanded", !expanded);
+    mobileMenu.classList.toggle("hidden");
+   });
+
+   // Order management
+   const orderContainer = document.getElementById("order-container");
+   const placeOrderBtn = document.getElementById("place-order");
+   const orderHistoryContainer = document.getElementById("order-history-container");
+   const orderHistoryOverlay = document.getElementById("order-history-overlay");
+   const closeOrderHistoryBtn = document.getElementById("close-order-history");
+   const showOrderHistoryBtn = document.getElementById("show-order-history");
+   const showOrderHistoryMobileBtn = document.getElementById("show-order-history-mobile");
+   const showOrderSectionBtn = document.getElementById("show-order-section");
+   const showOrderSectionMobileBtn = document.getElementById("show-order-section-mobile");
+   const orderSection = document.getElementById("order-section");
+
+   let order = {};
+   let orderHistory = [];
+
+   function addToOrder(id, name, price) {
+    const quantityInput = document.getElementById(`quantity-${id}`);
+    let quantity = parseInt(quantityInput.value);
+    if (isNaN(quantity) || quantity < 1) {
+     quantity = 1;
+     quantityInput.value = 1;
+    }
+    if (order[id]) {
+     order[id].quantity += quantity;
+    } else {
+     order[id] = { name, price, quantity };
+    }
+    renderOrder();
+   }
+
+   function renderOrder() {
+    orderContainer.innerHTML = "";
+    const keys = Object.keys(order);
+    if (keys.length === 0) {
+     orderContainer.innerHTML =
+      '<p class="text-gray-500 text-center mt-10">Your order is empty.</p>';
+     placeOrderBtn.disabled = true;
+     placeOrderBtn.setAttribute("aria-disabled", "true");
+     document.getElementById("order-total").textContent = "Total: ₱0.00";
+     return;
+    }
+    placeOrderBtn.disabled = false;
+    placeOrderBtn.setAttribute("aria-disabled", "false");
+    let total = 0;
+    keys.forEach((id) => {
+     const item = order[id];
+     const itemTotal = item.price * item.quantity;
+     total += itemTotal;
+     const div = document.createElement("div");
+     div.className = "py-3 flex items-center justify-between";
+     div.innerHTML = `
+                    <div class="flex flex-col max-w-[70%]">
+                        <span class="font-semibold text-gray-800 truncate" title="${item.name}">${item.name}</span>
+                        <span class="text-sm text-gray-600">Quantity: ${item.quantity}</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="font-semibold text-purple-700 whitespace-nowrap">₱${itemTotal.toFixed(
+                          2
+                        )}</span>
+                        <button aria-label="Remove ${item.name} from order" class="text-red-500 hover:text-red-700 focus:outline-none" onclick="removeFromOrder(${id})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+     orderContainer.appendChild(div);
+    });
+    document.getElementById(
+     "order-total"
+    ).textContent = `Total: ₱${total.toFixed(2)}`;
+   }
+
+   function removeFromOrder(id) {
+    delete order[id];
+    renderOrder();
+   }
+
+   async function placeOrder() {
+    if (Object.keys(order).length === 0) return;
+
+    const orderItems = Object.keys(order).map((id) => ({
+     menu_item_id: parseInt(id),
+     quantity: order[id].quantity,
+    }));
+
+    try {
+     const response = await fetch("/admin/order/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: orderItems }),
+     });
+     const data = await response.json();
+     if (response.ok) {
+      // Calculate total before clearing order
+      let total = 0;
+      Object.values(order).forEach((item) => {
+       total += item.price * item.quantity;
+      });
+
+      // Save order to history
+      const newOrder = {
+       id: data.order_id,
+       date: new Date().toLocaleString(),
+       items: JSON.parse(JSON.stringify(order)),
+       total,
+      };
+      orderHistory.unshift(newOrder);
+      renderOrderHistory();
+
+      order = {};
+      renderOrder();
+
+      // Show overlay with order ID and total
+      const overlay = document.getElementById("order-overlay");
+      const overlayOrderId = document.getElementById("overlay-order-id");
+      const overlayOrderTotal = document.getElementById("overlay-order-total");
+      overlayOrderId.textContent = "Your Order ID: " + data.order_id;
+      overlayOrderTotal.textContent = "Total: ₱" + total.toFixed(2);
+      overlay.classList.remove("hidden");
+
+      // Close overlay button
+      document.getElementById("close-overlay").onclick = () => {
+       overlay.classList.add("hidden");
+      };
+     } else {
+      alert("Failed to place order: " + data.error);
+     }
+    } catch (error) {
+     alert("Failed to place order. Please try again.");
+    }
+   }
+
+   function renderOrderHistory() {
+    orderHistoryContainer.innerHTML = "";
+    if (orderHistory.length === 0) {
+     orderHistoryContainer.innerHTML =
+      '<p class="text-gray-500 text-center mt-10">No past orders yet.</p>';
+     return;
+    }
+    orderHistory.forEach((order) => {
+     const div = document.createElement("div");
+     div.className = "border border-purple-300 rounded-lg p-4 shadow-sm bg-purple-50 mb-4";
+     div.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <span class="font-semibold text-purple-700">Order ID: ${order.id}</span>
+            <span class="text-sm text-gray-600">${order.date}</span>
+          </div>
+          <ul class="mb-2 max-h-40 overflow-y-auto divide-y divide-purple-200">
+            ${Object.values(order.items)
+              .map(
+               (item) => `
+              <li class="py-1 flex justify-between text-gray-800">
+                <span class="truncate max-w-[70%]" title="${item.name}">${item.name} x${item.quantity}</span>
+                <span class="font-semibold text-purple-700">₱${(
+                 item.price * item.quantity
+                ).toFixed(2)}</span>
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+          <div class="text-right font-semibold text-purple-700 text-lg">
+            Total: ₱${order.total.toFixed(2)}
+          </div>
+        `;
+     orderHistoryContainer.appendChild(div);
+    });
+   }
+
+   // Overlay show/hide with smooth fade
+   function showOrderHistoryOverlay() {
+    if (orderHistory.length === 0) {
+     renderOrderHistory();
+    }
+    orderHistoryOverlay.classList.remove("hidden");
+    orderHistoryOverlay.classList.remove("fade-out");
+    orderHistoryOverlay.classList.add("fade-in");
+    // Trap focus inside overlay
+    orderHistoryContainer.focus();
+   }
+   function hideOrderHistoryOverlay() {
+    orderHistoryOverlay.classList.remove("fade-in");
+    orderHistoryOverlay.classList.add("fade-out");
+    orderHistoryOverlay.addEventListener(
+     "animationend",
+     () => {
+      orderHistoryOverlay.classList.add("hidden");
+     },
+     { once: true }
+    );
+   }
+
+   // Show/hide order section on button click (for mobile and desktop)
+   function showOrderSection() {
+    orderSection.scrollIntoView({ behavior: "smooth" });
+   }
+
+   // Adjust font size to fit container for item names
+   function adjustFontSizeToFit(
+    element,
+    maxLines = 2,
+    minFontSize = 12,
+    maxFontSize = 20
+   ) {
+    const lineHeight = 1.2;
+    let fontSize = maxFontSize;
+    element.style.fontSize = fontSize + "px";
+    element.style.lineHeight = lineHeight;
+
+    // Temporarily set maxHeight to none to measure scrollHeight correctly
+    element.style.maxHeight = "none";
+
+    // Calculate max allowed height based on maxLines and lineHeight
+    const maxHeight = maxLines * fontSize * lineHeight;
+
+    // Reduce font size until text fits within maxLines or minFontSize reached
+    while (element.scrollHeight > maxHeight && fontSize > minFontSize) {
+     fontSize -= 1;
+     element.style.fontSize = fontSize + "px";
+     // Update maxHeight for new font size
+     const newMaxHeight = maxLines * fontSize * lineHeight;
+     if (element.scrollHeight <= newMaxHeight) {
+      break;
+     }
+    }
+
+    // Set maxHeight to clamp lines visually
+    element.style.maxHeight = maxLines * fontSize * lineHeight + "px";
+    element.style.overflow = "hidden";
+   }
+
+   function adjustAllItemNames() {
+    const itemNames = document.querySelectorAll(".item-name");
+    itemNames.forEach((el) => {
+     adjustFontSizeToFit(el, 2, 12, 20);
+    });
+   }
+
+   // New feature: Category filter buttons with prev/next arrows outside buttons, on menu item sides
+   const categoryButtonsContainer = document.getElementById("category-buttons");
+   const menuItemsWrapper = document.getElementById("menu-items-wrapper");
+   const prevCategoryBtn = document.getElementById("prev-category");
+   const nextCategoryBtn = document.getElementById("next-category");
+
+   let categories = [];
+   let currentCategoryIndex = 0;
+
+   // Collect categories from the DOM
+   function getCategories() {
+    const categorySections = document.querySelectorAll(".category-section");
+    const cats = [];
+    categorySections.forEach((section) => {
+     const cat = section.getAttribute("data-category");
+     if (cat && !cats.includes(cat)) {
+      cats.push(cat);
+     }
+    });
+    return cats;
+   }
+
+   // Render category buttons
+   function renderCategoryButtons() {
+    categories = getCategories();
+    categoryButtonsContainer.innerHTML = "";
+
+    categories.forEach((category, index) => {
+     const btn = document.createElement("button");
+     btn.type = "button";
+     btn.textContent = category;
+     btn.className =
+      "px-4 py-2 rounded-md bg-purple-100 text-purple-700 font-semibold hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500";
+     btn.setAttribute("aria-pressed", "false");
+     btn.addEventListener("click", () => {
+      currentCategoryIndex = index;
+      filterByCategory(category);
+      setActiveButton(btn);
+      updateArrowButtons();
+      scrollCategoryButtonIntoView(btn);
+      // Save selected category to localStorage
+      localStorage.setItem('selectedCategory', category);
+     });
+     categoryButtonsContainer.appendChild(btn);
+    });
+
+    // Automatically select the first category button and show its items
+    if (categories.length > 0) {
+     // Try to restore selected category from localStorage
+     const savedCategory = localStorage.getItem('selectedCategory');
+     if (savedCategory && categories.includes(savedCategory)) {
+      currentCategoryIndex = categories.indexOf(savedCategory);
+      const savedBtn = Array.from(categoryButtonsContainer.querySelectorAll('button')).find(btn => btn.textContent === savedCategory);
+      if (savedBtn) {
+       setActiveButton(savedBtn);
+       filterByCategory(savedCategory);
+       updateArrowButtons();
+       scrollCategoryButtonIntoView(savedBtn);
+       return;
+      }
+     }
+     currentCategoryIndex = 0;
+     const firstBtn = categoryButtonsContainer.querySelector("button");
+     if (firstBtn) {
+      firstBtn.click();
+     }
+    }
+   }
+
+   // Set active button styling and aria-pressed
+   function setActiveButton(activeBtn) {
+    const buttons = categoryButtonsContainer.querySelectorAll("button");
+    buttons.forEach((btn) => {
+     if (btn === activeBtn) {
+      btn.classList.remove("bg-purple-100", "text-purple-700");
+      btn.classList.add("bg-purple-600", "text-white");
+      btn.setAttribute("aria-pressed", "true");
+     } else {
+      btn.classList.remove("bg-purple-600", "text-white");
+      btn.classList.add("bg-purple-100", "text-purple-700");
+      btn.setAttribute("aria-pressed", "false");
+     }
+    });
+   }
+
+   // Filter menu items by category
+   function filterByCategory(category) {
+    const categorySections = document.querySelectorAll(".category-section");
+    categorySections.forEach((section) => {
+     if (section.getAttribute("data-category") === category) {
+      section.classList.remove("hidden");
+     } else {
+      section.classList.add("hidden");
+     }
+    });
+   }
+
+   // Update arrow buttons disabled state
+   function updateArrowButtons() {
+    prevCategoryBtn.disabled = currentCategoryIndex <= 0;
+    nextCategoryBtn.disabled = currentCategoryIndex >= categories.length - 1;
+   }
+
+   // Scroll active category button into view smoothly
+   function scrollCategoryButtonIntoView(button) {
+    button.scrollIntoView({ behavior: "smooth", inline: "center" });
+   }
+
+   // Event listeners for prev/next buttons
+   prevCategoryBtn.addEventListener("click", () => {
+    if (currentCategoryIndex > 0) {
+     currentCategoryIndex--;
+     const btns = categoryButtonsContainer.querySelectorAll("button");
+     const btn = btns[currentCategoryIndex];
+     if (btn) {
+      btn.click();
+     }
+    }
+   });
+
+   nextCategoryBtn.addEventListener("click", () => {
+    if (currentCategoryIndex < categories.length - 1) {
+     currentCategoryIndex++;
+     const btns = categoryButtonsContainer.querySelectorAll("button");
+     const btn = btns[currentCategoryIndex];
+     if (btn) {
+      btn.click();
+     }
+    }
+   });
+
+   // Run after DOM content loaded and after any dynamic content changes
+   document.addEventListener("DOMContentLoaded", () => {
+    adjustAllItemNames();
+    renderOrder();
+    renderOrderHistory();
+    renderCategoryButtons();
+    updateArrowButtons();
+
+    // Function to set arrows z-index above overlay
+    function setArrowsZIndex(above) {
+     const zIndexValue = above ? 60 : 20;
+     document.getElementById("prev-category").style.zIndex = zIndexValue;
+     document.getElementById("next-category").style.zIndex = zIndexValue;
+    }
+
+    // Observe overlay visibility changes to toggle arrows z-index
+    const orderOverlay = document.getElementById("order-overlay");
+    const orderHistoryOverlay = document.getElementById("order-history-overlay");
+
+    function checkOverlayVisibility() {
+     if (
+      !orderOverlay.classList.contains("hidden") ||
+      !orderHistoryOverlay.classList.contains("hidden")
+     ) {
+      setArrowsZIndex(true);
+     } else {
+      setArrowsZIndex(false);
+     }
+    }
+
+    // Initial check
+    checkOverlayVisibility();
+
+    // Mutation observer to watch for class changes on overlays
+    const observerConfig = { attributes: true, attributeFilter: ["class"] };
+    const observerCallback = (mutationsList) => {
+     for (const mutation of mutationsList) {
+      if (mutation.type === "attributes") {
+       checkOverlayVisibility();
+      }
+     }
+    };
+
+    const orderOverlayObserver = new MutationObserver(observerCallback);
+    const orderHistoryOverlayObserver = new MutationObserver(observerCallback);
+
+    orderOverlayObserver.observe(orderOverlay, observerConfig);
+    orderHistoryOverlayObserver.observe(orderHistoryOverlay, observerConfig);
+   });
+  </script>
+  <script>
+    // Function to fetch menu data from /api/menu and update the DOM
+    async function fetchAndUpdateMenu() {
+      try {
+        const response = await fetch('/api/menu');
+        if (!response.ok) {
+          console.error('Failed to fetch menu data');
+          return;
+        }
+        const menuData = await response.json();
+        updateMenuDOM(menuData);
+      } catch (error) {
+        console.error('Error fetching menu data:', error);
+      }
+    }
+
+    // Function to update the menu items in the DOM based on fetched data
+    function updateMenuDOM(menuData) {
+      const menuItemsWrapper = document.getElementById('menu-items-wrapper');
+      if (!menuItemsWrapper) return;
+
+      // Clear existing menu items
+      menuItemsWrapper.innerHTML = '';
+
+      // For each category, create category section and items
+      for (const [category, items] of Object.entries(menuData)) {
+        const categorySection = document.createElement('div');
+        categorySection.className = 'category-section mb-8 hidden';
+        categorySection.setAttribute('data-category', category);
+
+        const categoryTitle = document.createElement('h2');
+        categoryTitle.className = 'text-2xl font-bold text-purple-700 mb-4 border-b-2 border-purple-700 pb-1';
+        categoryTitle.textContent = category;
+        categorySection.appendChild(categoryTitle);
+
+        const itemsGrid = document.createElement('div');
+        itemsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mx-auto h-full';
+
+        items.forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'menu-item bg-white rounded-lg shadow-md p-6 flex flex-col items-center justify-between hover:shadow-xl transition-shadow duration-300';
+          if (item.status === 'not available') {
+            itemDiv.classList.add('bg-gray-300', 'cursor-not-allowed');
+          }
+          itemDiv.style.aspectRatio = '1 / 1';
+          itemDiv.style.position = 'relative';
+
+          const img = document.createElement('img');
+          img.alt = `Image of ${item.name} dish, a delicious food item`;
+          img.className = 'w-full h-40 rounded-lg object-cover mb-4';
+          if (item.status === 'not available') {
+            img.classList.add('opacity-50');
+          }
+          img.height = 160;
+          img.width = 160;
+          img.src = `/uploads/${item.photo_path || 'static/images/placeholder.png'}`;
+          itemDiv.appendChild(img);
+
+          const textCenterDiv = document.createElement('div');
+          textCenterDiv.className = 'text-center flex-grow flex flex-col justify-between w-full';
+
+          const innerDiv = document.createElement('div');
+
+          const h2 = document.createElement('h2');
+          h2.className = 'item-name mb-2 max-w-xs break-words';
+          h2.id = `item-name-${item.id}`;
+          h2.textContent = item.name;
+          innerDiv.appendChild(h2);
+
+          const pCategory = document.createElement('p');
+          pCategory.className = 'text-xs text-purple-500 font-semibold mb-1';
+          pCategory.textContent = item.category;
+          innerDiv.appendChild(pCategory);
+
+          const pDescription = document.createElement('p');
+          pDescription.className = 'text-gray-600 text-sm mb-4 max-w-xs break-words';
+          pDescription.textContent = item.description;
+          innerDiv.appendChild(pDescription);
+
+          textCenterDiv.appendChild(innerDiv);
+
+          const pPrice = document.createElement('p');
+          pPrice.className = 'font-semibold text-purple-700 mb-4';
+          pPrice.textContent = `Price: ₱${item.price}`;
+          textCenterDiv.appendChild(pPrice);
+
+          itemDiv.appendChild(textCenterDiv);
+
+          const buttonDiv = document.createElement('div');
+          buttonDiv.className = 'w-full flex items-center justify-center space-x-3';
+
+          const label = document.createElement('label');
+          label.className = 'sr-only';
+          label.htmlFor = `quantity-${item.id}`;
+          label.textContent = `Quantity for ${item.name}`;
+          buttonDiv.appendChild(label);
+
+          const input = document.createElement('input');
+          input.className = 'w-16 border border-gray-300 rounded-md text-center focus:ring-2 focus:ring-purple-500 focus:outline-none';
+          if (item.status === 'not available') {
+            input.classList.add('bg-gray-200', 'cursor-not-allowed');
+            input.disabled = true;
+          }
+          input.id = `quantity-${item.id}`;
+          input.min = 1;
+          input.type = 'number';
+          input.value = 1;
+          buttonDiv.appendChild(input);
+
+          const button = document.createElement('button');
+          button.setAttribute('aria-label', `Add ${item.name} to cart`);
+          button.className = 'bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md shadow-md transition flex items-center space-x-2';
+          if (item.status === 'not available') {
+            button.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            button.disabled = true;
+          }
+          button.onclick = () => addToOrder(item.id, item.name, item.price);
+
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-cart-plus';
+          button.appendChild(icon);
+
+          const span = document.createElement('span');
+          span.className = 'text-sm';
+          span.textContent = 'Add to Cart';
+          button.appendChild(span);
+
+          buttonDiv.appendChild(button);
+
+          itemDiv.appendChild(buttonDiv);
+
+          if (item.status === 'not available') {
+            const overlayDiv = document.createElement('div');
+            overlayDiv.className = 'absolute inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center rounded-lg pointer-events-none';
+
+            const spanOverlay = document.createElement('span');
+            spanOverlay.className = 'text-white font-bold text-lg';
+            spanOverlay.textContent = 'Not Available';
+
+            overlayDiv.appendChild(spanOverlay);
+            itemDiv.appendChild(overlayDiv);
+          }
+
+          itemsGrid.appendChild(itemDiv);
+        });
+
+        categorySection.appendChild(itemsGrid);
+        menuItemsWrapper.appendChild(categorySection);
+      }
+
+      // Re-render category buttons and select first category
+      renderCategoryButtons();
+      updateArrowButtons();
+      if (categories.length > 0) {
+        currentCategoryIndex = 0;
+        const firstBtn = categoryButtonsContainer.querySelector('button');
+        if (firstBtn) {
+          firstBtn.click();
+        }
+      }
+
+      // Adjust font sizes for item names
+      adjustAllItemNames();
+    }
+
+    // Initial fetch and update
+    fetchAndUpdateMenu();
+
+    // Poll every 10 seconds for updates
+    setInterval(fetchAndUpdateMenu, 10000);
+  </script>
+ </body>
+</html>
